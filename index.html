@@ -1,0 +1,1316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>rhunner — a spotwear mini-game</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:wght@400;500&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    :root {
+      /* Rhode brand greys */
+      --bg: #F1F0EF;          /* lightest */
+      --grey-mid: #B7B8B9;
+      --grey-blue: #B7C8D2;
+      --grey-dark: #898781;
+      --text: #898781;        /* darker grey for body copy */
+      /* subtle accent whispers */
+      --cream: #FFF6CB;
+      --pink-light: #F4DEEA;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 0 24px;
+    }
+
+    .brand-header {
+      width: 100%;
+      padding: 22px 40px;
+      border-bottom: 1px solid rgba(103, 100, 94, 0.08);
+      display: flex;
+      justify-content: center;
+      background: var(--bg);
+    }
+    .brand-word {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 32px;
+      color: var(--text);
+      letter-spacing: 1px;
+    }
+
+    main {
+      width: 100%;
+      max-width: 1100px;
+      padding: 20px 24px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .title-img {
+      display: block;
+      max-width: 280px;
+      width: 50%;
+      height: auto;
+      margin: 0 auto 10px;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    .tagline {
+      font-size: 14px;
+      color: var(--text);
+      opacity: 0.7;
+      margin: 0 0 28px;
+      letter-spacing: 0.5px;
+    }
+
+    .canvas-wrap {
+      position: relative;
+      width: 100%;
+      /* Cap width by either the design max (960px) or whatever width keeps
+         the 16:9 box within the viewport once we reserve ~140px for the
+         title and surrounding padding. The min() picks the smaller, so the
+         box always fits without scrolling, while preserving aspect ratio. */
+      max-width: min(960px, calc((100vh - 140px) * 16 / 9));
+      aspect-ratio: 960 / 540;
+      border-radius: 24px;
+      overflow: hidden;
+      border: 1px solid #F4DEEA;
+      box-shadow: 0 30px 60px -30px rgba(103, 100, 94, 0.35);
+      background: #B7B8B9;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+
+    .canvas-svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(241, 240, 239, 0.72);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      animation: fadeIn 0.5s ease-out;
+    }
+    .overlay.hidden { display: none; }
+
+    .overlay-inner {
+      text-align: center;
+      max-width: 520px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .overlay-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 500;
+      font-size: 56px;
+      color: var(--text);
+      margin: 0;
+      line-height: 1.05;
+    }
+
+    .overlay-sub {
+      font-size: 16px;
+      color: var(--text);
+      margin: 0 0 6px;
+      opacity: 0.85;
+    }
+
+    .small-text {
+      font-size: 13px;
+      color: var(--text);
+      opacity: 0.7;
+      margin: 0;
+    }
+
+    .small-hint {
+      font-size: 12px;
+      color: var(--text);
+      opacity: 0.55;
+      margin-top: 4px;
+    }
+
+    .shape-row {
+      display: flex;
+      gap: 18px;
+      margin: 4px 0 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .shape-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .shape-label {
+      font-size: 11px;
+      color: var(--text);
+      opacity: 0.7;
+      letter-spacing: 0.4px;
+    }
+    .shape-label.dim { opacity: 0.45; }
+
+    .cta-dark {
+      background: var(--text);
+      color: #FBF6EE;
+      border: none;
+      border-radius: 999px;
+      padding: 14px 32px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      letter-spacing: 1px;
+      cursor: pointer;
+      margin-top: 8px;
+      text-transform: uppercase;
+      transition: background 0.2s, transform 0.15s;
+    }
+    .cta-dark:hover { background: #5b5852; }
+
+    /* "Try again" button on the game over screen uses Rhode teal. */
+    #btn-retry { background: #03937B; color: #F1F0EF; }
+    #btn-retry:hover { background: #027460; }
+
+    /* "Shop spotwear" button on the win screen uses Rhode orange. */
+    #btn-shop { background: #FFA400; color: #F1F0EF; }
+    #btn-shop:hover { background: #E08F00; }
+
+    /* Brand-pink primary CTA, used on the welcome screen — larger and more
+       prominent than the standard dark CTA. Subtle continuous pulse draws
+       the eye without feeling busy. */
+    .cta-pink {
+      background: #E5A2CA;
+      color: #F1F0EF;
+      border: none;
+      border-radius: 999px;
+      padding: 22px 56px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 17px;
+      font-weight: 500;
+      letter-spacing: 1.2px;
+      cursor: pointer;
+      margin-top: 14px;
+      text-transform: uppercase;
+      box-shadow: 0 12px 28px -12px rgba(229, 162, 202, 0.6);
+      transition: background 0.2s, box-shadow 0.2s;
+      animation: ctaPulse 2.2s ease-in-out infinite;
+      transform-origin: center;
+    }
+    .cta-pink:hover {
+      background: #D88FBC;
+      box-shadow: 0 18px 36px -12px rgba(229, 162, 202, 0.75);
+    }
+    @keyframes ctaPulse {
+      0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 12px 28px -12px rgba(229, 162, 202, 0.55);
+      }
+      50% {
+        transform: scale(1.035);
+        box-shadow: 0 18px 38px -10px rgba(229, 162, 202, 0.8);
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .cta-pink { animation: none; }
+    }
+
+    /* Welcome screen has a wider inner container so the headline can sit
+       on a single line on desktop. */
+    #overlay-welcome .overlay-inner { max-width: 760px; }
+
+    /* Bigger, more prominent welcome-screen subtitle.
+       `text-wrap: balance` ensures that if the headline must wrap on
+       smaller screens, the lines break evenly rather than orphaning
+       a single word ("all.") on the last line. */
+    #overlay-welcome .overlay-sub {
+      font-size: 26px;
+      line-height: 1.25;
+      max-width: 720px;
+      opacity: 1;
+      margin-bottom: 0;
+      white-space: nowrap;
+      text-wrap: balance;
+    }
+    @media (max-width: 760px) {
+      #overlay-welcome .overlay-sub {
+        font-size: 20px;
+        white-space: normal;
+        max-width: 480px;
+      }
+    }
+
+    /* Welcome screen incentive line — sits between the headline and the
+       shape thumbnails. Reads as a quiet brand promise, not a shout. */
+    .incentive {
+      font-size: 14px;
+      color: var(--text);
+      letter-spacing: 0.4px;
+      margin: -6px 0 6px;
+      padding: 6px 16px;
+      border-radius: 999px;
+      background: rgba(255, 246, 203, 0.7);
+      border: 1px solid rgba(229, 162, 202, 0.45);
+      text-transform: uppercase;
+    }
+
+    .cta-light {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid rgba(103, 100, 94, 0.3);
+      border-radius: 999px;
+      padding: 12px 28px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      letter-spacing: 0.6px;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: background 0.2s;
+    }
+    .cta-light:hover { background: #e8e6e2; }
+
+    .code-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 14px 28px;
+      border: 1.5px dashed var(--pink);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.5);
+      margin: 4px 0;
+    }
+    .code-label {
+      font-size: 11px;
+      color: var(--text);
+      opacity: 0.6;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+    }
+    .code-value {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 28px;
+      color: var(--text);
+      letter-spacing: 3px;
+    }
+
+    .celebrate {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+
+    .footer {
+      font-size: 12px;
+      color: var(--text);
+      opacity: 0.5;
+      margin-top: 28px;
+      letter-spacing: 0.5px;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Win screen needs a wider container and a tighter title size so
+       "You spotted all the shapes!" fits on a single line on desktop. */
+    #overlay-win .overlay-inner { max-width: 760px; }
+    #overlay-win .overlay-title {
+      font-size: 46px;
+      white-space: nowrap;
+    }
+    @media (max-width: 720px) {
+      #overlay-win .overlay-title {
+        font-size: 32px;
+        white-space: normal;
+        text-wrap: balance;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .title-img { max-width: 240px; width: 70%; }
+      .overlay-title { font-size: 40px; }
+      .brand-header { padding: 18px 24px; }
+      main { padding: 24px 16px 0; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <img class="title-img" src="Assets/Title.png" alt="rhunner" />
+
+    <div class="canvas-wrap" id="canvas-wrap">
+      <!-- SVG game world -->
+      <svg
+        class="canvas-svg"
+        id="game-svg"
+        viewBox="0 0 960 540"
+        preserveAspectRatio="xMidYMid meet"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <defs>
+          <!-- studio infinity backdrop: Rhode greys with a faint blue-grey
+               note up top and the lightest Rhode grey at the horizon -->
+          <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stop-color="#D2DADE" />
+            <stop offset="60%"  stop-color="#DDDDDB" />
+            <stop offset="100%" stop-color="#F1F0EF" />
+          </linearGradient>
+          <!-- glossy seamless floor: kisses the sky at the horizon (lightest
+               Rhode grey) and only dips to Rhode medium grey toward the
+               camera so the floor feels airy, not heavy. -->
+          <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stop-color="#F1F0EF" />
+            <stop offset="55%"  stop-color="#DCDDDC" />
+            <stop offset="100%" stop-color="#B7B8B9" />
+          </linearGradient>
+          <!-- subtle pink atmospheric whisper used as an overlay in the upper sky -->
+          <radialGradient id="pinkAtmosphere" cx="80%" cy="15%" r="60%">
+            <stop offset="0%"   stop-color="#F4DEEA" stop-opacity="0.32" />
+            <stop offset="100%" stop-color="#F4DEEA" stop-opacity="0" />
+          </radialGradient>
+          <!-- subtle floor reflection mask: fades reflections from full → transparent toward camera -->
+          <linearGradient id="reflectionFade" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stop-color="#FFFFFF" stop-opacity="0.55" />
+            <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0" />
+          </linearGradient>
+          <!-- vignette to focus the eye on the runner / collectibles -->
+          <radialGradient id="vignette" cx="50%" cy="55%" r="65%">
+            <stop offset="60%"  stop-color="#000000" stop-opacity="0" />
+            <stop offset="100%" stop-color="#000000" stop-opacity="0.18" />
+          </radialGradient>
+          <!-- soft inner shine, used for highlights -->
+          <radialGradient id="spotShine" cx="35%" cy="35%">
+            <stop offset="0%"   stop-color="#fff" stop-opacity="0.8" />
+            <stop offset="100%" stop-color="#fff" stop-opacity="0" />
+          </radialGradient>
+          <!-- obstacle: gold/mustard jelly blob — distinct from the pink runner -->
+          <radialGradient id="obstacleJelly" cx="35%" cy="30%" r="75%">
+            <stop offset="0%"   stop-color="#F0B543" />
+            <stop offset="55%"  stop-color="#D7930A" />
+            <stop offset="100%" stop-color="#A56E00" />
+          </radialGradient>
+          <!-- gentle glow used behind collectibles -->
+          <radialGradient id="haloGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%"   stop-color="#FFFFFF" stop-opacity="0.7" />
+            <stop offset="60%"  stop-color="#FFFFFF" stop-opacity="0.15" />
+            <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0" />
+          </radialGradient>
+          <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+          <filter id="runnerShadow" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="2" />
+          </filter>
+          <filter id="reflectionBlur" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="1.6" />
+          </filter>
+        </defs>
+
+        <!-- sky -->
+        <rect x="0" y="0" width="960" height="540" fill="url(#sky)" />
+        <!-- subtle pink atmospheric whisper in the upper sky -->
+        <rect x="0" y="0" width="960" height="540" fill="url(#pinkAtmosphere)" />
+
+        <!-- parallax: clouds (far) -->
+        <g id="layer-clouds"></g>
+        <!-- parallax: hills (mid) -->
+        <g id="layer-hills"></g>
+        <!-- parallax: floaters (mid+) -->
+        <g id="layer-floaters"></g>
+        <!-- parallax: ground (near) -->
+        <g id="layer-ground"></g>
+
+        <!-- dynamic items (collectibles + obstacles) -->
+        <g id="layer-items"></g>
+
+        <!-- runner -->
+        <g id="layer-runner"></g>
+
+        <!-- sparkles -->
+        <g id="layer-sparkles"></g>
+
+        <!-- HUD: shape tracker -->
+        <g id="layer-hud"></g>
+      </svg>
+
+      <!-- HTML overlays for screens -->
+      <div class="overlay" id="overlay-welcome">
+        <div class="overlay-inner">
+          <p class="overlay-sub">Spot the shapes on the go and collect them all</p>
+          <p class="incentive">Collect all 5 to unlock 15% off your spotwear purchase</p>
+          <div class="shape-row" id="welcome-shapes"></div>
+          <button class="cta-pink" id="btn-start">Start Spotting</button>
+          <p class="small-hint">tap / space to jump — collect the shapes, dodge the obstacles</p>
+        </div>
+      </div>
+
+      <div class="overlay hidden" id="overlay-oops">
+        <div class="overlay-inner">
+          <h2 class="overlay-title">Game over</h2>
+          <p class="overlay-sub" id="oops-sub"></p>
+          <div class="shape-row" id="oops-shapes"></div>
+          <button class="cta-dark" id="btn-retry">try again</button>
+        </div>
+      </div>
+
+      <div class="overlay hidden" id="overlay-win">
+        <div class="overlay-inner">
+          <div class="celebrate" id="win-celebrate"></div>
+          <h2 class="overlay-title">You spotted all the shapes!</h2>
+          <p class="overlay-sub">Congrats! You've unlocked 15% off your spotwear purchase.</p>
+          <button class="cta-dark" id="btn-shop">Shop With Code</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+  (function () {
+    'use strict';
+
+    // =================================================================
+    // Constants
+    // =================================================================
+    const SVGNS = 'http://www.w3.org/2000/svg';
+
+    const COLORS = {
+      bg: '#F1F0EF',
+      text: '#67645E',
+      pink: '#E29FC8',
+      obstacle: '#A84A4A',
+      obstacleDark: '#7A2E2E',
+    };
+
+    const SHAPES = [
+      { key: 'daisy',     label: 'daisy',      color: '#FFA400' },
+      { key: 'bubble',    label: 'bubble',     color: '#B7B8B9' },
+      { key: 'shroom',    label: 'shroom',     color: '#03937B' },
+      { key: 'curve',     label: 'curve',      color: '#B7C8D2' },
+      { key: 'jellybean', label: 'jelly bean', color: '#E09FC5' },
+    ];
+
+    const WORLD_W      = 960;
+    const WORLD_H      = 540;
+    const GROUND_Y     = 430;
+    const RUNNER_X     = 180;
+    const RUNNER_SIZE  = 64;
+    const GRAVITY      = 2200;
+    const JUMP_V       = 880;
+    const BASE_SPEED   = 320;
+    const SPEED_RAMP   = 14;
+    const COLLECT_Y    = 295;
+    const COLLECT_SIZE = 56;
+    const OBSTACLE_W   = 44;
+    const OBSTACLE_H   = 44;
+    const SPAWN_GAP    = 520;
+
+    // =================================================================
+    // SVG helpers
+    // =================================================================
+    function el(tag, attrs, children) {
+      const node = document.createElementNS(SVGNS, tag);
+      if (attrs) for (const k in attrs) node.setAttribute(k, attrs[k]);
+      if (children) {
+        for (const c of children) {
+          if (c) node.appendChild(c);
+        }
+      }
+      return node;
+    }
+
+    // Asset paths (relative to this HTML file).
+    // Note: the daisy file is intentionally `dasiy.png` to match the existing filename.
+    const ASSETS = {
+      daisy:     'Assets/dasiy.png',
+      bubble:    'Assets/bubble.png',
+      shroom:    'Assets/shroom.png',
+      curve:     'Assets/curve.png',
+      jellybean: 'Assets/jellybean.png',
+      runner:    'Assets/runner.png',
+    };
+
+    // Build a shape as an SVG <image> referencing the PNG asset.
+    // When `filled` is false, dim + grayscale to indicate "not collected".
+    function buildShape(kind, size, opts) {
+      opts = opts || {};
+      const filled = opts.filled !== false;
+      const g = el('g', {});
+      const img = el('image', {
+        href: ASSETS[kind],
+        'xlink:href': ASSETS[kind],
+        x: 0,
+        y: 0,
+        width: size,
+        height: size,
+        preserveAspectRatio: 'xMidYMid meet',
+      });
+      if (!filled) {
+        img.setAttribute('opacity', 0.35);
+        img.setAttribute('style', 'filter: grayscale(1);');
+      }
+      g.appendChild(img);
+      return g;
+    }
+
+    // Runner: PNG image with a soft drop shadow underneath.
+    function buildRunner(size) {
+      const g = el('g', {});
+      g.appendChild(el('ellipse', {
+        cx: size * 0.5,
+        cy: size * 0.96,
+        rx: size * 0.32,
+        ry: size * 0.05,
+        fill: 'rgba(0,0,0,0.14)',
+        filter: 'url(#runnerShadow)',
+      }));
+      g.appendChild(el('image', {
+        href: ASSETS.runner,
+        'xlink:href': ASSETS.runner,
+        x: 0,
+        y: 0,
+        width: size,
+        height: size,
+        preserveAspectRatio: 'xMidYMid meet',
+      }));
+      return g;
+    }
+
+    // Soft pink jelly blob obstacle — organic, rounded, Rhode-coded.
+    // Drawn in a 100x100 coordinate space then scaled to `size`.
+    function buildBadSkinDay(size) {
+      const g = el('g', { transform: `scale(${size / 100})` });
+
+      // organic rounded blob silhouette — wobbly, multi-lobe, anchored at the
+      // bottom (~y=92) so the shape sits naturally on the ground line.
+      const blobPath =
+        'M24,86 ' +
+        'C14,78 12,62 22,52 ' +
+        'C12,40 20,22 36,22 ' +
+        'C42,10 62,10 70,22 ' +
+        'C86,22 92,38 84,50 ' +
+        'C92,62 84,80 70,82 ' +
+        'C64,92 44,94 36,86 ' +
+        'C32,90 28,90 24,86 Z';
+
+      g.appendChild(el('path', {
+        d: blobPath,
+        fill: 'url(#obstacleJelly)',
+      }));
+
+      // soft inner glow overlay for depth (uses the existing spotShine radial)
+      g.appendChild(el('path', {
+        d: blobPath,
+        fill: 'url(#spotShine)',
+        opacity: 0.45,
+      }));
+
+      // wide top-left specular sheen
+      g.appendChild(el('ellipse', {
+        cx: 38, cy: 36, rx: 22, ry: 11,
+        fill: '#FFFFFF', opacity: 0.4,
+      }));
+
+      // small pinpoint shine — the glossy 3D "highlight dot"
+      g.appendChild(el('ellipse', {
+        cx: 32, cy: 30, rx: 7, ry: 4,
+        fill: '#FFFFFF', opacity: 0.9,
+      }));
+
+      return g;
+    }
+
+    // Small simplified SVG version of a collectible — used for burst particles.
+    // Drawn in a 100x100 coordinate space then scaled to `size`.
+    function buildSmallShape(kind, size) {
+      const shape = SHAPES.find(s => s.key === kind);
+      const fill = shape.color;
+      const g = el('g', { transform: `scale(${size / 100})` });
+      switch (kind) {
+        case 'daisy': {
+          g.appendChild(el('path', {
+            d: 'M50,10 C65,10 70,25 60,40 C75,30 90,35 90,50 C90,65 75,70 60,60 C70,75 65,90 50,90 C35,90 30,75 40,60 C25,70 10,65 10,50 C10,35 25,30 40,40 C30,25 35,10 50,10 Z',
+            fill,
+          }));
+          g.appendChild(el('circle', { cx: 50, cy: 50, r: 14, fill: '#67645E' }));
+          break;
+        }
+        case 'bubble':
+          g.appendChild(el('ellipse', { cx: 50, cy: 50, rx: 42, ry: 32, fill }));
+          break;
+        case 'shroom':
+          g.appendChild(el('path', {
+            d: 'M20,55 C20,30 80,30 80,55 C80,62 70,64 50,64 C30,64 20,62 20,55 Z M40,64 L60,64 L58,90 C58,93 55,95 50,95 C45,95 42,93 42,90 Z',
+            fill,
+          }));
+          break;
+        case 'curve':
+          g.appendChild(el('path', {
+            d: 'M30,25 C50,15 80,25 80,50 C80,70 65,80 55,75 C45,70 50,60 40,65 C25,72 15,55 20,40 C22,32 25,28 30,25 Z',
+            fill,
+          }));
+          break;
+        case 'jellybean':
+          g.appendChild(el('path', {
+            d: 'M25,35 C40,20 75,25 80,45 C84,65 65,80 45,78 C20,75 12,55 25,35 Z',
+            fill,
+          }));
+          break;
+      }
+      return g;
+    }
+
+    function clear(node) {
+      while (node.firstChild) node.removeChild(node.firstChild);
+    }
+
+    // =================================================================
+    // Static parallax layers — built once, transformed each frame.
+    // We render two horizontally-tiled copies and slide them.
+    // =================================================================
+    // Studio backdrop layers — minimal, intentional, no clutter.
+    // Clouds and hills are intentionally empty: the world is a seamless
+    // product-photo backdrop, not a landscape.
+    function buildClouds() {
+      const layer = document.getElementById('layer-clouds');
+      clear(layer);
+      // Single very-soft horizon bloom — a wide, blurred cream wash that sits
+      // just above the floor so the backdrop reads as warmly lit, not flat.
+      for (let i = 0; i < 2; i++) {
+        const g = el('g', { transform: `translate(${i * WORLD_W},0)` });
+        g.appendChild(el('ellipse', {
+          cx: WORLD_W / 2,
+          cy: GROUND_Y - 40,
+          rx: WORLD_W * 0.55,
+          ry: 90,
+          fill: '#FFF6CB',
+          opacity: 0.28,
+          filter: 'url(#softGlow)',
+        }));
+        layer.appendChild(g);
+      }
+    }
+
+    function buildHills() {
+      // intentionally empty — replaced by a clean horizon
+      const layer = document.getElementById('layer-hills');
+      clear(layer);
+    }
+
+    function buildFloaters() {
+      // intentionally empty — no competing decorations
+      const layer = document.getElementById('layer-floaters');
+      clear(layer);
+    }
+
+    function buildGround() {
+      const layer = document.getElementById('layer-ground');
+      clear(layer);
+      // Two-copy tile so we can scroll the floor highlight bands subtly.
+      for (let i = 0; i < 2; i++) {
+        const g = el('g', { transform: `translate(${i * WORLD_W},0)` });
+
+        // The floor itself — flat, glossy, gradient-filled.
+        g.appendChild(el('rect', {
+          x: 0,
+          y: GROUND_Y,
+          width: WORLD_W,
+          height: WORLD_H - GROUND_Y,
+          fill: 'url(#ground)',
+        }));
+
+        // Bright horizon kiss — a thin glow exactly where sky meets floor.
+        g.appendChild(el('rect', {
+          x: 0,
+          y: GROUND_Y - 1,
+          width: WORLD_W,
+          height: 2,
+          fill: '#FFFFFF',
+          opacity: 0.85,
+        }));
+        // soft bloom just under the kiss
+        g.appendChild(el('rect', {
+          x: 0,
+          y: GROUND_Y,
+          width: WORLD_W,
+          height: 16,
+          fill: 'url(#reflectionFade)',
+          opacity: 0.7,
+        }));
+
+        layer.appendChild(g);
+      }
+    }
+
+    // =================================================================
+    // Game state
+    // =================================================================
+    const state = {
+      screen: 'welcome', // welcome | playing | oops | win
+      runnerY: GROUND_Y - RUNNER_SIZE,
+      runnerVY: 0,
+      isJumping: false,
+      bob: 0,
+      bobT: 0,
+      distance: 0,
+      speed: BASE_SPEED,
+      spawnIndex: 0,         // alternation cursor: even = shape, odd = obstacle
+      shapeSpawnCursor: 0,   // rotates through the uncollected-shape list
+      items: [],
+      bgOffsets: [0, 0, 0],
+      sparkles: [],
+      collected: [], // array of shape keys
+    };
+
+    function resetState() {
+      state.runnerY = GROUND_Y - RUNNER_SIZE;
+      state.runnerVY = 0;
+      state.isJumping = false;
+      state.bob = 0;
+      state.bobT = 0;
+      state.distance = 0;
+      state.speed = BASE_SPEED;
+      state.spawnIndex = 0;
+      state.shapeSpawnCursor = 0;
+      state.items = [];
+      state.bgOffsets = [0, 0, 0];
+      state.sparkles = [];
+      state.collected = [];
+    }
+
+    // Spawns alternating shape / obstacle items indefinitely. Shape picks
+    // cycle through the still-uncollected shapes so missed shapes always
+    // have another chance to appear.
+    function spawnNext() {
+      const idx = state.spawnIndex;
+      const isShape = idx % 2 === 0;
+      if (isShape) {
+        const uncollected = SHAPES.filter(s => state.collected.indexOf(s.key) === -1);
+        if (uncollected.length === 0) {
+          // Win is already triggered elsewhere; nothing left to spawn as a shape.
+          state.spawnIndex += 1;
+          return;
+        }
+        // Avoid spawning a duplicate of any uncollected shape currently on screen.
+        const onScreenKinds = new Set(
+          state.items
+            .filter(i => i.type === 'shape' && !i.collected)
+            .map(i => i.kind)
+        );
+        const startCursor = state.shapeSpawnCursor;
+        let pick = null;
+        for (let attempt = 0; attempt < uncollected.length; attempt++) {
+          const candidate = uncollected[(startCursor + attempt) % uncollected.length];
+          if (!onScreenKinds.has(candidate.key)) {
+            pick = candidate;
+            state.shapeSpawnCursor = (startCursor + attempt + 1) % uncollected.length;
+            break;
+          }
+        }
+        // If every uncollected shape is already on screen, just take the next
+        // in the cycle anyway (still valid — it'll just be a second copy).
+        if (!pick) {
+          pick = uncollected[startCursor % uncollected.length];
+          state.shapeSpawnCursor = (startCursor + 1) % uncollected.length;
+        }
+        state.items.push({
+          type: 'shape',
+          kind: pick.key,
+          x: WORLD_W + 60,
+          y: COLLECT_Y,
+          w: COLLECT_SIZE,
+          h: COLLECT_SIZE,
+          collected: false,
+          bob: Math.random() * Math.PI * 2,
+        });
+      } else {
+        state.items.push({
+          type: 'obstacle',
+          x: WORLD_W + 60,
+          y: GROUND_Y - OBSTACLE_H,
+          w: OBSTACLE_W,
+          h: OBSTACLE_H,
+        });
+      }
+      state.spawnIndex += 1;
+    }
+
+    // =================================================================
+    // Rendering — update SVG nodes from state every frame
+    // =================================================================
+    const layers = {
+      clouds:   document.getElementById('layer-clouds'),
+      hills:    document.getElementById('layer-hills'),
+      floaters: document.getElementById('layer-floaters'),
+      ground:   document.getElementById('layer-ground'),
+      items:    document.getElementById('layer-items'),
+      runner:   document.getElementById('layer-runner'),
+      sparkles: document.getElementById('layer-sparkles'),
+      hud:      document.getElementById('layer-hud'),
+    };
+
+    function renderParallax() {
+      layers.clouds.setAttribute('transform',   `translate(${-state.bgOffsets[0]},0)`);
+      layers.hills.setAttribute('transform',    `translate(${-state.bgOffsets[1]},0)`);
+      layers.floaters.setAttribute('transform', `translate(${-state.bgOffsets[1] * 1.3},0)`);
+      layers.ground.setAttribute('transform',   `translate(${-state.bgOffsets[2]},0)`);
+    }
+
+    function renderRunner() {
+      clear(layers.runner);
+      if (state.screen === 'welcome') return;
+      // floor contact shadow that scales with jump height (stays on the floor)
+      const lift = (GROUND_Y - RUNNER_SIZE) - state.runnerY;     // 0 grounded, >0 in air
+      const liftRatio = Math.max(0, Math.min(1, lift / 180));
+      const shadowRx = RUNNER_SIZE * 0.34 * (1 - liftRatio * 0.55);
+      const shadowOpacity = 0.22 * (1 - liftRatio * 0.6);
+      layers.runner.appendChild(el('ellipse', {
+        cx: RUNNER_X + RUNNER_SIZE / 2,
+        cy: GROUND_Y + 3,
+        rx: shadowRx,
+        ry: 4,
+        fill: `rgba(0,0,0,${shadowOpacity.toFixed(3)})`,
+        filter: 'url(#runnerShadow)',
+      }));
+      const g = el('g', {
+        transform: `translate(${RUNNER_X}, ${state.runnerY + state.bob})`,
+      });
+      g.appendChild(buildRunner(RUNNER_SIZE));
+      layers.runner.appendChild(g);
+    }
+
+    function renderItems() {
+      clear(layers.items);
+      if (state.screen !== 'playing') return;
+      for (const it of state.items) {
+        if (it.collected) continue;
+        if (it.type === 'shape') {
+          const wob = Math.sin(it.bob || 0) * 4;
+          const cx = it.x + it.w / 2;
+          const cy = it.y + it.h / 2 + wob;
+
+          // soft halo behind the collectible — makes it pop off the backdrop
+          layers.items.appendChild(el('ellipse', {
+            cx, cy,
+            rx: it.w * 0.95,
+            ry: it.h * 0.95,
+            fill: 'url(#haloGlow)',
+          }));
+
+          // floor reflection — a faded, mirrored copy of the PNG just below the horizon
+          const reflect = el('g', {
+            transform: `translate(${it.x},${GROUND_Y * 2 - (it.y + wob) - it.h}) scale(1,-1) translate(0,${-it.h})`,
+            opacity: 0.22,
+            filter: 'url(#reflectionBlur)',
+          });
+          reflect.appendChild(buildShape(it.kind, it.w));
+          // mask the reflection with the fade gradient (drawn on top)
+          layers.items.appendChild(reflect);
+          layers.items.appendChild(el('rect', {
+            x: it.x,
+            y: GROUND_Y,
+            width: it.w,
+            height: WORLD_H - GROUND_Y,
+            fill: 'url(#ground)',
+            opacity: 0.55,
+          }));
+
+          // soft contact shadow on the floor
+          layers.items.appendChild(el('ellipse', {
+            cx,
+            cy: GROUND_Y + 3,
+            rx: it.w * 0.30,
+            ry: 4,
+            fill: 'rgba(0,0,0,0.16)',
+            filter: 'url(#runnerShadow)',
+          }));
+
+          // the collectible itself, with soft glow
+          const g = el('g', {
+            transform: `translate(${it.x},${it.y + wob})`,
+            filter: 'url(#softGlow)',
+          });
+          g.appendChild(buildShape(it.kind, it.w));
+          // gel-shine highlight on top of the PNG (top-left specular)
+          g.appendChild(el('ellipse', {
+            cx: it.w * 0.32,
+            cy: it.h * 0.28,
+            rx: it.w * 0.22,
+            ry: it.h * 0.12,
+            fill: '#FFFFFF',
+            opacity: 0.55,
+          }));
+          g.appendChild(el('ellipse', {
+            cx: it.w * 0.26,
+            cy: it.h * 0.22,
+            rx: it.w * 0.07,
+            ry: it.h * 0.04,
+            fill: '#FFFFFF',
+            opacity: 0.95,
+          }));
+          layers.items.appendChild(g);
+        } else {
+          // soft floor shadow under the obstacle
+          layers.items.appendChild(el('ellipse', {
+            cx: it.x + it.w / 2,
+            cy: GROUND_Y + 3,
+            rx: it.w * 0.42,
+            ry: 4,
+            fill: 'rgba(0,0,0,0.18)',
+            filter: 'url(#runnerShadow)',
+          }));
+          const g = el('g', { transform: `translate(${it.x},${it.y})` });
+          g.appendChild(buildBadSkinDay(it.w));
+          layers.items.appendChild(g);
+        }
+      }
+    }
+
+    function renderSparkles() {
+      clear(layers.sparkles);
+      for (const sp of state.sparkles) {
+        const opacity = Math.max(0, sp.life);
+        const scale = 0.85 + (1 - sp.life) * 0.4;
+        const g = el('g', {
+          transform: `translate(${sp.x},${sp.y}) rotate(${sp.rot}) scale(${scale}) translate(${-sp.size / 2},${-sp.size / 2})`,
+          opacity,
+        });
+        g.appendChild(buildSmallShape(sp.kind, sp.size));
+        layers.sparkles.appendChild(g);
+      }
+    }
+
+    function renderHUD() {
+      clear(layers.hud);
+      if (state.screen !== 'playing') return;
+      const cellSize = 56;
+      const totalW = SHAPES.length * cellSize;
+      const startX = WORLD_W / 2 - totalW / 2;
+      const wrap = el('g', { transform: `translate(${startX}, 24)` });
+      SHAPES.forEach((sh, i) => {
+        const got = state.collected.indexOf(sh.key) !== -1;
+        const cell = el('g', { transform: `translate(${i * cellSize}, 0)` });
+        cell.appendChild(el('circle', {
+          cx: 22, cy: 22, r: 22, fill: '#fff', opacity: 0.7,
+        }));
+        const inner = el('g', { transform: 'translate(2, 2)' });
+        inner.appendChild(buildShape(sh.key, 40, { filled: got }));
+        cell.appendChild(inner);
+        wrap.appendChild(cell);
+      });
+      layers.hud.appendChild(wrap);
+    }
+
+    // =================================================================
+    // Overlay / screen management
+    // =================================================================
+    const overlays = {
+      welcome: document.getElementById('overlay-welcome'),
+      oops:    document.getElementById('overlay-oops'),
+      win:     document.getElementById('overlay-win'),
+    };
+
+    function showScreen(name) {
+      state.screen = name;
+      overlays.welcome.classList.toggle('hidden', name !== 'welcome');
+      overlays.oops.classList.toggle('hidden',    name !== 'oops');
+      overlays.win.classList.toggle('hidden',     name !== 'win');
+
+      if (name === 'oops')  populateOopsScreen();
+      if (name === 'win')   populateWinScreen();
+
+      // re-render statics
+      renderRunner();
+      renderItems();
+      renderHUD();
+    }
+
+    function populateWelcomeShapes() {
+      const row = document.getElementById('welcome-shapes');
+      row.innerHTML = '';
+      for (const sh of SHAPES) {
+        const cell = document.createElement('div');
+        cell.className = 'shape-cell';
+
+        const svg = document.createElementNS(SVGNS, 'svg');
+        svg.setAttribute('width', 36);
+        svg.setAttribute('height', 36);
+        svg.setAttribute('viewBox', '0 0 36 36');
+        svg.appendChild(buildShape(sh.key, 36, { filled: true }));
+        cell.appendChild(svg);
+
+        const label = document.createElement('span');
+        label.className = 'shape-label';
+        label.textContent = sh.label;
+        cell.appendChild(label);
+
+        row.appendChild(cell);
+      }
+    }
+
+    function populateOopsScreen() {
+      document.getElementById('oops-sub').textContent =
+        `You spotted ${state.collected.length} of 5 shapes.`;
+      const row = document.getElementById('oops-shapes');
+      row.innerHTML = '';
+      for (const sh of SHAPES) {
+        const got = state.collected.indexOf(sh.key) !== -1;
+        const cell = document.createElement('div');
+        cell.className = 'shape-cell';
+
+        const svg = document.createElementNS(SVGNS, 'svg');
+        svg.setAttribute('width', 36);
+        svg.setAttribute('height', 36);
+        svg.setAttribute('viewBox', '0 0 36 36');
+        svg.appendChild(buildShape(sh.key, 36, { filled: got }));
+        cell.appendChild(svg);
+
+        const label = document.createElement('span');
+        label.className = 'shape-label' + (got ? '' : ' dim');
+        label.textContent = sh.label;
+        cell.appendChild(label);
+
+        row.appendChild(cell);
+      }
+    }
+
+    function populateWinScreen() {
+      const row = document.getElementById('win-celebrate');
+      row.innerHTML = '';
+      for (const sh of SHAPES) {
+        const svg = document.createElementNS(SVGNS, 'svg');
+        svg.setAttribute('width', 28);
+        svg.setAttribute('height', 28);
+        svg.setAttribute('viewBox', '0 0 28 28');
+        svg.appendChild(buildShape(sh.key, 28, { filled: true }));
+        row.appendChild(svg);
+      }
+    }
+
+    // =================================================================
+    // Game loop
+    // =================================================================
+    let lastTime = 0;
+    let rafId = null;
+
+    function tick(now) {
+      const dt = Math.min(0.033, (now - lastTime) / 1000);
+      lastTime = now;
+
+      if (state.screen === 'playing') {
+        // physics: runner
+        state.runnerVY += GRAVITY * dt;
+        state.runnerY  += state.runnerVY * dt;
+        const maxY = GROUND_Y - RUNNER_SIZE;
+        if (state.runnerY >= maxY) {
+          state.runnerY = maxY;
+          state.runnerVY = 0;
+          state.isJumping = false;
+        }
+
+        // bob while grounded
+        if (!state.isJumping) {
+          state.bobT += dt * 9;
+          state.bob = Math.sin(state.bobT) * 3;
+        } else {
+          state.bob = 0;
+        }
+
+        // world scroll
+        state.distance      += state.speed * dt;
+        state.bgOffsets[0]   = (state.bgOffsets[0] + state.speed * 0.15 * dt) % WORLD_W;
+        state.bgOffsets[1]   = (state.bgOffsets[1] + state.speed * 0.4  * dt) % WORLD_W;
+        state.bgOffsets[2]   = (state.bgOffsets[2] + state.speed * 0.8  * dt) % WORLD_W;
+
+        // move items
+        for (const it of state.items) {
+          it.x -= state.speed * dt;
+          if (it.type === 'shape') it.bob += dt * 3;
+        }
+
+        // spawn rhythm
+        const last = state.items[state.items.length - 1];
+        if (last && (WORLD_W + 60 - last.x) >= SPAWN_GAP) {
+          spawnNext();
+        }
+
+        // collisions
+        const rx = RUNNER_X + 8;
+        const ry = state.runnerY + 8;
+        const rw = RUNNER_SIZE - 16;
+        const rh = RUNNER_SIZE - 16;
+        for (const it of state.items) {
+          if (it.collected) continue;
+          const hit = rx < it.x + it.w && rx + rw > it.x &&
+                      ry < it.y + it.h && ry + rh > it.y;
+          if (!hit) continue;
+
+          if (it.type === 'shape') {
+            it.collected = true;
+            state.collected.push(it.kind);
+            // burst of small shape particles in the kind that was collected
+            const cx = it.x + it.w / 2;
+            const cy = it.y + it.h / 2;
+            for (let i = 0; i < 12; i++) {
+              const angle = Math.random() * Math.PI * 2;
+              const speed = 90 + Math.random() * 160;
+              state.sparkles.push({
+                kind: it.kind,
+                x: cx,
+                y: cy,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed - 60, // small upward bias for an arc
+                rot: Math.random() * 360,
+                vrot: (Math.random() - 0.5) * 540,
+                size: 14 + Math.random() * 10,
+                life: 1,
+              });
+            }
+            state.speed = BASE_SPEED + state.collected.length * SPEED_RAMP;
+            if (state.collected.length >= SHAPES.length) {
+              showScreen('win');
+              break;
+            }
+          } else {
+            showScreen('oops');
+            break;
+          }
+        }
+
+        // burst particles: velocity + gravity + rotation + fade
+        for (const sp of state.sparkles) {
+          sp.x   += sp.vx * dt;
+          sp.y   += sp.vy * dt;
+          sp.vy  += 520 * dt;          // gentle gravity for an arc
+          sp.vx  *= (1 - 0.6 * dt);    // mild air drag
+          sp.rot += sp.vrot * dt;
+          sp.life -= dt * 1.4;
+        }
+        state.sparkles = state.sparkles.filter(sp => sp.life > 0);
+
+        // cull off-screen items
+        state.items = state.items.filter(it => it.x + it.w > -50);
+      }
+
+      // every frame: redraw dynamic groups + parallax transforms
+      renderParallax();
+      renderRunner();
+      renderItems();
+      renderSparkles();
+      renderHUD();
+
+      rafId = requestAnimationFrame(tick);
+    }
+
+    // =================================================================
+    // Input + flow
+    // =================================================================
+    function startGame() {
+      resetState();
+      state.screen = 'playing';
+      overlays.welcome.classList.add('hidden');
+      overlays.oops.classList.add('hidden');
+      overlays.win.classList.add('hidden');
+      // seed first item
+      spawnNext();
+    }
+
+    function jump() {
+      if (state.screen !== 'playing') return;
+      if (!state.isJumping) {
+        state.runnerVY = -JUMP_V;
+        state.isJumping = true;
+      }
+    }
+
+    function handleAction() {
+      if (state.screen === 'welcome' || state.screen === 'oops') {
+        startGame();
+      } else if (state.screen === 'playing') {
+        jump();
+      }
+    }
+
+    // Keyboard
+    window.addEventListener('keydown', function (e) {
+      if (e.code === 'Space' || e.key === ' ') {
+        e.preventDefault();
+        handleAction();
+      }
+    });
+
+    // Tap / click on canvas
+    const canvasWrap = document.getElementById('canvas-wrap');
+    canvasWrap.addEventListener('click', function () {
+      handleAction();
+    });
+    canvasWrap.addEventListener('touchstart', function (e) {
+      e.preventDefault();
+      handleAction();
+    }, { passive: false });
+
+    // Buttons (stop click bubbling so canvas click doesn't double-fire)
+    function bindBtn(id, fn) {
+      const btn = document.getElementById(id);
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        fn();
+      });
+    }
+    bindBtn('btn-start',  startGame);
+    bindBtn('btn-retry',  startGame);
+    bindBtn('btn-shop',   function () {
+      window.open('https://www.rhodeskin.com', '_blank');
+    });
+
+    // =================================================================
+    // Boot
+    // =================================================================
+    buildClouds();
+    buildHills();
+    buildFloaters();
+    buildGround();
+    populateWelcomeShapes();
+    showScreen('welcome');
+
+    lastTime = performance.now();
+    rafId = requestAnimationFrame(tick);
+  })();
+  </script>
+</body>
+</html>
